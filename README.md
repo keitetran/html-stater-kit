@@ -10,8 +10,8 @@ This is package for start project html with jQuery, Bootstrap 4.
 * Adding a standard comment header to all source files, custom on ```gulpfile.js``` file
 
 ### Setup project ###
-```git clone https://github.com/keitetran/html-stater-kit.git``` Clone project
-```cd html-stater-kit```
-```npm install```   Install all required packages
-```gulp``` Run project with browserSync
-```gulp build``` Build project
+* ```git clone https://github.com/keitetran/html-stater-kit.git``` Clone project
+* ```cd html-stater-kit```
+* ```npm install```   Install all required packages
+* ```gulp``` Run project with browserSync
+* ```gulp build``` Build project
