@@ -22,7 +22,6 @@ const del = require("del");
 const inject = require('gulp-inject');
 const settings = {
 	outputDir: "./dist",
-	debounceDelay: 1000,
 	plugins: {
 		css: [
 			"node_modules/sweetalert2/dist/sweetalert2.min.css",
@@ -62,12 +61,14 @@ const settings = {
 let injectContentToHtml = [
 	path.join(settings.outputDir, 'plugins/css/bootstrap.min.css')
 ];
+
 settings.plugins.js.forEach(item => {
 	if (item.indexOf("node_modules/") > -1) {
 		let file = path.parse(item);
 		injectContentToHtml.push(path.join(settings.outputDir, `plugins/js/${file.name}${file.ext}`));
 	}
 });
+
 settings.plugins.css.forEach(item => {
 	if (item.indexOf("node_modules/") > -1) {
 		let file = path.parse(item);
