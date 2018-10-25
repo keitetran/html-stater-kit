@@ -4,133 +4,227 @@
  * Creator: Tran Ngoc Anh
  * Email: tran.ngoc.anh@infogram.co.jp
  */
-
-var gulp = require('gulp');
-var browserSync = require('browser-sync').create();
-var runSequence = require('run-sequence');
-var gulpIf = require('gulp-if');
-
-// Copy required plugin file
-gulp.task('copy-required-file', ['images', 'javascript'], function () {
-	// Copying CSS to /dist
-	gulp.src([
-		'node_modules/bootstrap/dist/css/bootstrap.min.css'
-	]).pipe(gulp.dest("dist/plugins/css"));
-
-	// Copying Fonts to /dist
-	gulp.src([
-		//'node_modules/font-awesome/fonts/*',
-	]).pipe(gulp.dest("dist/plugins/fonts"));
-
-	// Copying image to /dist
-	gulp.src([
-		//'node_modules/font-awesome/fonts/*',
-	]).pipe(gulp.dest("dist/plugins/images"));
-
-	// Copying javascript to /dist
-	gulp.src([
-		'node_modules/jquery/dist/jquery.min.js',
-		'node_modules/popper.js/dist/umd/popper.min.js',
-		'node_modules/bootstrap/dist/js/bootstrap.min.js'
-	]).pipe(gulp.dest("dist/plugins/js"));
-});
-
-// Compile SCSS into CSS
-gulp.task('scss', function () {
-	var sass = require('gulp-sass');
-	var postcss = require('gulp-postcss');
-	var autoprefixer = require('autoprefixer');
-
-	var postcss_opts = [
-		autoprefixer({
-			browsers: ['last 5 version']
-		})
-	];
-
-	return gulp.src(['src/scss/app.scss'])
-		.pipe(sass())
-		.pipe(postcss(postcss_opts)) // Parse CSS and add vendor prefixes to rules
-		.pipe(gulp.dest('dist/assets/css'))
-		.pipe(browserSync.stream());
-});
-
-// Copying images to /dist
-gulp.task('images', function () {
-	return gulp.src('src/images/**/*').pipe(gulp.dest("dist/assets/images"));
-});
-
-// Copying javascript to /dist
-gulp.task('javascript', function () {
-	return gulp.src('src/js/**/*').pipe(gulp.dest("dist/assets/js"));
-});
-
-// Compile Html file to /dist
-gulp.task('html', function () {
-	var fileinclude = require('gulp-file-include');
-	return gulp.src(['src/*.html'])
-		.pipe(fileinclude({
-			prefix: '@@',
-			basepath: '@file'
-		})).pipe(gulp.dest('dist'))
-		.pipe(browserSync.stream());
-});
-
-// Clean /dist folder
-gulp.task('clean', function () {
-	var del = require('del');
-	return del.sync('dist');
-});
-
-// Static Server + watching scss/html/assets
-gulp.task('default', function (callback) {
-	// Run task
-	runSequence('copy-required-file', 'scss', 'html', callback);
-
-	// Init server 
-	browserSync.init({
-		server: "./dist"
-	});
-
-	// watch file state change
-	gulp.watch(['src/scss/*'], ['scss']);
-	gulp.watch(['src/images/**/*', 'src/js/**/*'], ['images', 'javascript']);
-	gulp.watch(['src/*.html', 'src/shared/*.html'], ['html']);
-
-	// Push event reload to browser
-	gulp.on('change', browserSync.reload);
-});
-
-// Build project
-gulp.task('build', function () {
-	runSequence('clean', ['copy-required-file', 'scss', 'html'], 'compress', 'comments');
-});
-
-
-// Compress CSS and JS
-gulp.task('compress', function () {
-	var uglify = require('gulp-uglify');
-	var cssnano = require('gulp-cssnano');
-	var useref = require('gulp-useref');
-
-	return gulp.src('dist/*.html')
-		.pipe(useref())
-		.pipe(gulpIf('*.js', uglify()))
-		.pipe(gulpIf('*.css', cssnano()))
-		.pipe(gulp.dest('dist'));
-});
-
-// Add header file comment
-gulp.task('comments', function () {
-	var headerComment = require('gulp-header-comment');
-	var headerCommentTemp = `
+const path = require("path");
+const gulp = require("gulp");
+const browserSync = require("browser-sync").create();
+const runSequence = require("run-sequence");
+const gulpIf = require("gulp-if");
+const concat = require("gulp-concat");
+const sass = require("gulp-sass");
+const postcss = require("gulp-postcss");
+const autoprefixer = require("autoprefixer");
+const headerComment = require("gulp-header-comment");
+const uglify = require("gulp-uglify");
+const cssnano = require("gulp-cssnano");
+const useref = require("gulp-useref");
+const fileinclude = require("gulp-file-include");
+const del = require("del");
+const inject = require('gulp-inject');
+const settings = {
+	outputDir: "./dist",
+	debounceDelay: 1000,
+	plugins: {
+		css: [
+			"node_modules/sweetalert2/dist/sweetalert2.min.css",
+			"./src/plugins/**/*.css"
+		],
+		js: [
+			"node_modules/jquery/dist/jquery.min.js",
+			"node_modules/popper.js/dist/umd/popper.min.js",
+			"node_modules/bootstrap/dist/js/bootstrap.min.js",
+			"node_modules/sweetalert2/dist/sweetalert2.min.js",
+			"./src/plugins/**/*.js"
+		],
+		fonts: [],
+		images: []
+	},
+	autoprefixer: {
+		browsers: ["last 5 version"]
+	},
+	sass: {
+		outputStyle: "compressed"
+	},
+	fileHeaderComment: `
 		Project Name: <%= pkg.name %>
 		Description: <%= pkg.description %>
 		Creator: <%= pkg.author %>
 		Email: <%= pkg.email %>
-	`;
-	gulp.src('dist/**/*')
-		.pipe(gulpIf('*.js', headerComment(headerCommentTemp)))
-		.pipe(gulpIf('*.css', headerComment(headerCommentTemp)))
-		.pipe(gulpIf('*.html', headerComment(headerCommentTemp)))
-		.pipe(gulp.dest('dist/'))
+	`,
+	fileinclude: {
+		prefix: "@@",
+		basepath: "@file"
+	},
+};
+
+
+let injectContentToHtml = [
+	path.join(settings.outputDir, 'plugins/css/bootstrap.min.css')
+];
+settings.plugins.js.forEach(item => {
+	if (item.indexOf("node_modules/") > -1) {
+		let file = path.parse(item);
+		injectContentToHtml.push(path.join(settings.outputDir, `plugins/js/${file.name}${file.ext}`));
+	}
+});
+settings.plugins.css.forEach(item => {
+	if (item.indexOf("node_modules/") > -1) {
+		let file = path.parse(item);
+		injectContentToHtml.push(path.join(settings.outputDir, `plugins/css/${file.name}${file.ext}`));
+	}
+});
+injectContentToHtml = injectContentToHtml.concat([
+	path.join(settings.outputDir, 'assets/js/*.js'),
+	path.join(settings.outputDir, 'assets/css/*.css')
+]);
+
+
+/**
+ * Desploy file to folder
+ * @param {Folder to dest} dir 
+ */
+const destToDir = (dir) => {
+	return gulp.dest(path.join(settings.outputDir, dir))
+}
+
+/**
+ * Copy required plugin file
+ */
+gulp.task("copy-plugin-file", () => {
+	// Copying CSS
+	gulp.src(settings.plugins.css).pipe(destToDir("plugins/css"));
+
+	// Copying Fonts
+	gulp.src(settings.plugins.fonts).pipe(destToDir("plugins/fonts"));
+
+	// Copying image
+	gulp.src(settings.plugins.images).pipe(destToDir("plugins/images"));
+
+	// Copying javascript
+	gulp.src(settings.plugins.js).pipe(destToDir("plugins/js"));
+});
+
+// Compile Bootstrap SCSS into CSS
+gulp.task("bootstrap", () => {
+	return gulp
+		.src(["./src/scss/bootstrap.scss"])
+		.pipe(sass(settings.sass))
+		.pipe(postcss([autoprefixer(settings.autoprefixer)]))
+		.pipe(concat("bootstrap.min.css"))
+		.pipe(destToDir("plugins/css"))
+		.pipe(browserSync.stream());
+});
+
+// Compile SCSS into CSS
+gulp.task("scss", () => {
+	return gulp
+		.src(["./src/scss/styles.scss"])
+		.pipe(sass())
+		.pipe(postcss([autoprefixer(settings.autoprefixer)]))
+		.pipe(concat("styles.css"))
+		.pipe(destToDir("assets/css"))
+		.pipe(browserSync.stream());
+});
+
+// Copying images
+gulp.task("images", () => {
+	return gulp
+		.src("./src/images/**/*")
+		.pipe(destToDir("assets/images"))
+		.pipe(browserSync.stream());
+});
+
+// Copying javascript
+gulp.task("javascript", () => {
+	return gulp
+		.src("./src/js/**/*")
+		.pipe(destToDir("assets/js"))
+		.pipe(browserSync.stream());
+});
+
+// Compile Html file
+gulp.task("html", () => {
+	let source = gulp.src(injectContentToHtml, {
+		read: false
+	});
+
+	return gulp
+		.src(["./src/*.html"])
+		.pipe(fileinclude(settings.fileinclude))
+		.pipe(inject(source))
+		.pipe(gulp.dest(settings.outputDir))
+		.pipe(browserSync.stream());
+});
+
+// Clean build folder
+gulp.task("clean", () => {
+	return del.sync(settings.outputDir);
+});
+
+// Compress CSS and JS
+gulp.task("compress", () => {
+	return gulp
+		.src(path.join(settings.outputDir, "/*.html"))
+		.pipe(useref())
+		.pipe(gulpIf("*.js", uglify()))
+		.pipe(gulpIf("*.css", cssnano()))
+		.pipe(gulp.dest(settings.outputDir));
+});
+
+// Add header file comment
+gulp.task("comments", () => {
+	gulp
+		.src(path.join(settings.outputDir, "/**/*"))
+		.pipe(gulpIf("*.js", headerComment(settings.fileHeaderComment)))
+		.pipe(gulpIf("*.css", headerComment(settings.fileHeaderComment)))
+		.pipe(gulpIf("*.html", headerComment(settings.fileHeaderComment)))
+		.pipe(gulp.dest(settings.outputDir));
+});
+
+gulp.task("watch", () => {
+	gulp.watch("src/scss/**/*.scss", ["scss"]);
+	gulp.watch(["src/scss/_variable.scss", "src/scss/bootstrap.scss"], ["bootstrap"]);
+	gulp.watch("src/images/**/*", ["images"]);
+	gulp.watch("src/js/**/*.js", ["javascript"]);
+	gulp.watch("src/**/*.html", ["html"]);
+});
+
+// browserSync
+gulp.task("browserSync", (callback) => {
+	// Init server
+	browserSync.init({
+		server: settings.outputDir,
+		open: false
+	});
+
+	// Push event reload to browser
+	gulp.on("change", browserSync.reload);
+
+	callback();
+});
+
+// Static Server + watching scss/html/assets
+gulp.task("default", ["clean"], (callback) => {
+	// Run task
+	runSequence(
+		"copy-plugin-file",
+		"images",
+		"javascript",
+		"bootstrap",
+		"scss",
+		"html",
+		"watch",
+		"browserSync",
+		callback
+	);
+});
+
+// Build project
+gulp.task("build", (callback) => {
+	runSequence(
+		"clean",
+		["copy-plugin-file", "images", "javascript", "bootstrap", "scss", "html"],
+		"compress",
+		"comments",
+		callback
+	);
 });
