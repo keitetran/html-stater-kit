@@ -13,5 +13,5 @@ This is package for start project html with jQuery, Bootstrap 4.
 * ```git clone https://github.com/keitetran/html-stater-kit.git``` Clone project
 * ```cd html-stater-kit```
 * ```npm install```   Install all required packages
-* ```gulp``` Run project with browserSync
-* ```gulp build``` Build project
+* ```npm start``` Run project with browserSync
+* ```npm run build``` Build project
