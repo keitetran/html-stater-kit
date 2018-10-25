@@ -56,7 +56,9 @@ const settings = {
 	},
 };
 
-
+/**
+ * Inject resource to html file
+ */
 let injectContentToHtml = [
 	path.join(settings.outputDir, 'plugins/css/bootstrap.min.css')
 ];
@@ -72,6 +74,12 @@ settings.plugins.css.forEach(item => {
 		injectContentToHtml.push(path.join(settings.outputDir, `plugins/css/${file.name}${file.ext}`));
 	}
 });
+
+fs.readdirSync("./src/plugins").forEach(file => {
+	let fileInfo = path.parse(path.join("./src/plugins", file));
+	if (fileInfo.ext == ".js") injectContentToHtml.push(path.join(settings.outputDir, "plugins/js/" + file));
+});
+
 injectContentToHtml = injectContentToHtml.concat([
 	path.join(settings.outputDir, 'assets/js/*.js'),
 	path.join(settings.outputDir, 'assets/css/*.css')
