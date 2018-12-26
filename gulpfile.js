@@ -160,7 +160,10 @@ gulp.task("html", () => {
 	return gulp
 		.src(["./src/*.html"])
 		.pipe(fileinclude(settings.fileinclude))
-		.pipe(inject(source))
+		.pipe(inject(source, {
+			ignorePath: settings.outputDir.replace("./", ""),
+			addRootSlash: false
+		}))
 		.pipe(gulp.dest(settings.outputDir))
 		.pipe(browserSync.stream());
 });
