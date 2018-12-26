@@ -19,6 +19,7 @@ const cssnano = require("gulp-cssnano");
 const useref = require("gulp-useref");
 const fileinclude = require("gulp-file-include");
 const del = require("del");
+const fs = require("fs");
 const inject = require('gulp-inject');
 const settings = {
 	outputDir: "./dist",
